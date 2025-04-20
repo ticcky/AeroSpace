@@ -30,7 +30,7 @@ var defaultConfigUrl: URL {
 @MainActor var config: Config = defaultConfig // todo move to Ctx?
 @MainActor var configUrl: URL = defaultConfigUrl
 
-struct Config: ConvenienceCopyable {
+struct Config: ConvenienceCopyable, @unchecked Sendable {
     var afterLoginCommand: [any Command] = []
     var afterStartupCommand: [any Command] = []
     var _indentForNestedContainersWithTheSameOrientation: Void = ()
@@ -56,8 +56,26 @@ struct Config: ConvenienceCopyable {
     var onWindowDetected: [WindowDetectedCallback] = []
 
     var preservedWorkspaceNames: [String] = []
+    var virtualSplitOnTheseMonitors: [String] = []
 }
 
 enum DefaultContainerOrientation: String {
     case horizontal, vertical, auto
 }
+
+
+final class ConfigStore : @unchecked Sendable {
+    private let queue = DispatchQueue(label: "config.queue", qos: .userInitiated, attributes: .concurrent)
+    private var _config = Config()
+
+    func get() -> Config {
+        queue.sync { _config }
+    }
+
+    @MainActor
+    func set(_ new: Config) {
+        queue.async(flags: .barrier) { self._config = new }
+    }
+}
+
+let store = ConfigStore()

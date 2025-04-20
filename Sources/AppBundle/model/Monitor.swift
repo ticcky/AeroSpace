@@ -95,9 +95,43 @@ var mainMonitor: Monitor {
 }
 
 var monitors: [Monitor] {
-    isUnitTest
-        ? [testMonitor]
-        : NSScreen.screens.enumerated().map { $0.element.toMonitor(monitorAppKitNsScreenScreensId: $0.offset + 1) }
+    if (isUnitTest) { return [testMonitor] }
+
+    var result = NSScreen.screens.enumerated().map { $0.element.toMonitor(monitorAppKitNsScreenScreensId: $0.offset + 1) }
+    var newResult: [Monitor] = []
+    let myConfig: Config = store.get()
+    dump(myConfig.virtualSplitOnTheseMonitors)
+    for m in result {
+        if myConfig.virtualSplitOnTheseMonitors.contains(m.name) { // m.name == "LEN P32p-20" {
+            var r1 = m.rect;
+            r1.width = r1.width / 2
+            var vr1 = m.visibleRect
+            vr1.width = vr1.width / 2
+            var h1 = MonitorImpl(
+                monitorAppKitNsScreenScreensId: m.monitorAppKitNsScreenScreensId,
+                name: m.name + " H1",
+                rect: r1,
+                visibleRect: vr1
+            )
+            newResult.append(h1)
+
+            var r2 = r1;
+            r2.topLeftX = r2.topLeftX + r2.width
+            var vr2 = vr1
+            vr2.topLeftX = r2.topLeftX
+            var h2 = MonitorImpl(
+                monitorAppKitNsScreenScreensId: m.monitorAppKitNsScreenScreensId,
+                name: m.name + " H2",
+                rect: r2,
+                visibleRect: vr2
+            )
+            newResult.append(h2)
+        } else {
+            newResult.append(m)
+        }
+    }
+    
+    return newResult
 }
 
 var sortedMonitors: [Monitor] {

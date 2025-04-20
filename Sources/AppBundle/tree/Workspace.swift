@@ -167,16 +167,62 @@ private extension CGPoint {
 
 @MainActor
 private func rearrangeWorkspacesOnMonitors() {
-    var oldVisibleScreens: Set<CGPoint> = screenPointToVisibleWorkspace.keys.toSet()
-
     let newScreens = monitors.map(\.rect.topLeftCorner)
-    var newScreenToOldScreenMapping: [CGPoint: CGPoint] = [:]
-    for newScreen in newScreens {
-        if let oldScreen = oldVisibleScreens.minBy({ ($0 - newScreen).vectorLength }) {
-            check(oldVisibleScreens.remove(oldScreen) != nil)
-            newScreenToOldScreenMapping[newScreen] = oldScreen
+    let oldScreens = Array(screenPointToVisibleWorkspace.keys)
+
+    let maxDistance: Double = 200
+
+    var bestMap: [CGPoint: CGPoint] = [:]
+    var bestMatchCount = 0
+    var bestTotalCost = Double.infinity
+
+    func recurse(
+      _ idx: Int,
+      _ remOld: [CGPoint],
+      _ curMap: [CGPoint: CGPoint],
+      _ curCost: Double
+    ) {
+      // once we’ve considered every newScreen
+      if idx == newScreens.count {
+        let matched = curMap.count
+        // lexicographically pick highest count, then lowest cost
+        if matched > bestMatchCount
+          || (matched == bestMatchCount && curCost < bestTotalCost)
+        {
+          bestMatchCount = matched
+          bestTotalCost  = curCost
+          bestMap        = curMap
         }
+        return
+      }
+
+      let newPt = newScreens[idx]
+
+      // 1) **Skip** matching this new screen
+      recurse(idx + 1, remOld, curMap, curCost)
+
+      // 2) Try matching to _each_ remaining old, but only if ≤ maxDistance
+      for (i, oldPt) in remOld.enumerated() {
+        let d = (newPt - oldPt).vectorLength
+        // guard d <= maxDistance else { continue }
+        // simple prune: even if we match every remaining one step,
+        // we can't beat bestMatchCount? (optional)
+        
+        var nextMap = curMap
+        nextMap[newPt] = oldPt
+
+        var nextRem = remOld
+        nextRem.remove(at: i)
+
+        recurse(idx + 1, nextRem, nextMap, curCost + d)
+      }
     }
+
+    // run it
+    recurse(0, oldScreens, [:], 0)
+
+    // now this is your final mapping
+    let newScreenToOldScreenMapping = bestMap
 
     let oldScreenPointToVisibleWorkspace = screenPointToVisibleWorkspace
     screenPointToVisibleWorkspace = [:]

@@ -29,6 +29,7 @@ struct ReloadConfigCommand: Command {
             if !args.dryRun {
                 resetHotKeys()
                 config = parsedConfig
+                store.set(config)
                 configUrl = url
                 activateMode(activeMode)
                 syncStartAtLogin()
