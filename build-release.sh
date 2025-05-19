@@ -1,4 +1,7 @@
 #!/bin/bash
+# Also needed:
+# sudo xcode-select -s /Applications/Xcode.app
+
 cd "$(dirname "$0")"
 source ./script/setup.sh
 
@@ -27,20 +30,20 @@ EOF
 ./build-shell-completion.sh
 
 ./generate.sh
-./script/check-uncommitted-files.sh
+# ./script/check-uncommitted-files.sh
 ./generate.sh --build-version "$build_version" --codesign-identity "$codesign_identity"
 
 configuration="Release"
 
 generate-git-hash
-swift build -c release --arch arm64 --arch x86_64 --product aerospace # CLI
+# swift build -c release --arch arm64 --product aerospace # CLI
+swift build -c release --arch arm64 --arch x86_64 --product aerospace
 xcodebuild clean build \
     -scheme AeroSpace \
     -destination "generic/platform=macOS" \
     -configuration "$configuration" \
     -derivedDataPath .xcode-build
-
-git checkout .
+# git checkout .
 
 rm -rf .release && mkdir .release
 cp -r ".xcode-build/Build/Products/$configuration/AeroSpace.app" .release

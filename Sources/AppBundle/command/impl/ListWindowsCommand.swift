@@ -47,7 +47,8 @@ struct ListWindowsCommand: Command {
             for window in windows {
                 _windows.append((window, try await window.title))
             }
-            windows = _windows.sortedBy([{ $0.window.app.name ?? "" }, \.title]).map { $0.window }
+            // windows = _windows.sortedBy([{ $0.window.app.name ?? "" }, \.title]).map { $0.window }
+            windows = _windows.map { $0.window }
 
             let list = windows.map { AeroObj.window($0) }
             if args.json {
